@@ -90,3 +90,14 @@ Create chart name and version as used by the chart label.
 {{- define "triton-inference-server.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+
+{{- define "template" -}}
+{{- $name := index . 0 -}}
+{{- $context := index . 1 -}}
+{{- $v:= $context.Template.Name | split "/" -}}
+{{- $n := len $v -}}
+{{- $last := sub $n 1 | printf "_%d" | index $v -}}
+{{- $wtf := $context.Template.Name | replace $last $name -}}
+{{ include $wtf $context }}
+{{- end -}}

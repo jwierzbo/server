@@ -47,6 +47,12 @@ spec:
         release: {{ .Release.Name }}
 
     spec:
+      nodeSelector:
+        arangodb.com/gpu: T4G
+      tolerations:
+      - key: "arangodb.com/gpu"
+        operator: "Exists"
+        effect: NoSchedule
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.imageName }}"
@@ -94,7 +100,42 @@ spec:
             httpGet:
               path: /v2/health/ready
               port: http
-              
+        - name: tls-sidecar
+          image: nginxinc/nginx-unprivileged
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /app/cert
+            - name: config-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: pass-volume
+              mountPath: /app/pass
+          securityContext:
+            runAsUser: 0
+          ports:
+            - containerPort: 4430
+              name: http
+            - containerPort: 4432
+              name: metrics
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: tls
+            items:
+              - key: server-cert
+                path: server.pem
+              - key: server-key
+                path: server-key.pem
+        - name: config-volume
+          configMap:
+            name: nginx-config
+        - name: pass-volume
+          secret:
+            secretName: htpasswd
+            items:
+              - key: htpasswd
+                path: htpasswd
       securityContext:
         runAsUser: 1000
         fsGroup: 1000
